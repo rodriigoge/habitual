@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Habit Tracker",
+    "slug": "habitual",
+    "version": "0.1.0",
+    "scheme": "habitual",
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "plugins": [
+      "expo-router",
+      "expo-sqlite"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+.expo/
+dist/
+coverage/
+package-lock.json
+expo-env.d.ts
+docs/
+AGENTS.md
