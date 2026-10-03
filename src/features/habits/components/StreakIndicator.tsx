@@ -17,6 +17,15 @@ export function StreakIndicator({ value }: { value: number }) {
 }
 const styles = StyleSheet.create({
   container: { alignItems: 'flex-end' },
-  value: { ...typography.metric, color: colors.textPrimary },
-  label: { ...typography.caption, color: colors.textSecondary },
+  value: {
+    ...typography.metric,
+    lineHeight: typography.metric.fontSize,
+    includeFontPadding: false,
+    color: colors.textPrimary,
+  },
+  label: {
+    ...typography.caption,
+    includeFontPadding: false,
+    color: colors.textSecondary,
+  },
 });

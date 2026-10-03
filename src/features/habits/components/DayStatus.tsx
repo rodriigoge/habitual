@@ -32,7 +32,7 @@ export function DayStatus({
       accessibilityRole="checkbox"
       accessibilityState={{ checked: completed, disabled: true }}
       accessibilityLabel={`${habitName}, ${description}${isToday ? ', hoje' : ''}, ${completed ? 'concluído' : 'não concluído'}`}
-      style={[styles.container, isToday && styles.today]}
+      style={styles.container}
     >
       <Text style={styles.weekday}>
         {formatLocalDate(date, { weekday: 'short' })}
@@ -40,9 +40,7 @@ export function DayStatus({
       <Text style={[styles.day, isToday && styles.todayLabel]}>
         {formatLocalDate(date, { day: '2-digit' })}
       </Text>
-      <View style={[styles.mark, completed && styles.completed]}>
-        {completed && <Text style={styles.check}>✓</Text>}
-      </View>
+      <View style={[styles.mark, completed && styles.completed]} />
     </View>
   );
 }
@@ -54,24 +52,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
     gap: spacing.xs,
-    borderRadius: radius.control,
   },
-  today: { backgroundColor: colors.surface },
   weekday: { ...typography.caption, color: colors.textSecondary },
   day: { ...typography.body, color: colors.textPrimary },
-  todayLabel: { fontWeight: '700', textDecorationLine: 'underline' },
+  todayLabel: { fontWeight: '700' },
   mark: {
     width: controls.iconSize,
     height: controls.iconSize,
     borderRadius: radius.round,
     borderWidth: 1,
     borderColor: colors.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   completed: {
     backgroundColor: colors.completed,
     borderColor: colors.completed,
   },
-  check: { ...typography.caption, color: colors.onAction },
 });

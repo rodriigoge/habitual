@@ -41,8 +41,7 @@ describe('DayStatus', () => {
       disabled: true,
     });
     expect(day).toBeOnTheScreen();
-    if (completed) expect(screen.getByText('✓')).toBeOnTheScreen();
-    else expect(screen.queryByText('✓')).toBeNull();
+    expect(screen.queryByText('✓')).toBeNull();
   });
 });
 

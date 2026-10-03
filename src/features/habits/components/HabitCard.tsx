@@ -50,7 +50,7 @@ export function HabitCard({
   );
 }
 const styles = StyleSheet.create({
-  container: { paddingVertical: spacing.xl, gap: spacing.xl },
+  container: { paddingVertical: spacing.xl, gap: spacing.md },
   heading: {
     flexDirection: 'row',
     flexWrap: 'wrap',
