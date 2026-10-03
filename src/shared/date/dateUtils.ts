@@ -87,3 +87,17 @@ export function getRecentDates(today: LocalDate, count: number): LocalDate[] {
   const first = addDays(today, 1 - count);
   return Array.from({ length: count }, (_, index) => addDays(first, index));
 }
+
+/** Formats a calendar day without shifting it to the device timezone. */
+export function formatLocalDate(
+  date: LocalDate,
+  options: Pick<
+    Intl.DateTimeFormatOptions,
+    'weekday' | 'day' | 'month' | 'year'
+  >,
+): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    ...options,
+    timeZone: 'UTC',
+  }).format(parseDate(date));
+}
