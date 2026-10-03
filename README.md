@@ -1,6 +1,6 @@
 # Habit Tracker Mobile
 
-Bootstrap (Milestone 0) com Expo SDK 57, React Native, TypeScript estrito e Expo Router.
+Milestones 0–4: Expo SDK 57, Date Foundation, domínio puro, SQLite e Design System Foundation.
 A única tela exibe **Habit Tracker** e **App running**.
 
 ## Desenvolvimento
@@ -45,8 +45,10 @@ src/
   shared/
 ```
 
-As pastas de `src/` são apenas reservadas com `.gitkeep`. Não há banco, regras de
-domínio, hábitos, calendário, design system, backend ou autenticação.
+A Date Foundation fica em `src/shared/date`, o domínio e repository em
+`src/features/habits`, e a inicialização/migrations em `src/database`.
+A fundação visual está documentada em [src/design-system/README.md](src/design-system/README.md).
+UI de hábitos, calendário, backend e autenticação não foram implementados.
 Os testes ficam fora de `app/` para não serem interpretados como rotas.
 
 O lockfile fixa a instalação. Os overrides de React DOM, Reanimated e Worklets
@@ -60,3 +62,40 @@ envolvendo `node-forge`, `uuid`/`xcode` e `decode-uri-component`/`query-string`
 na cadeia do Expo e Expo Router. A correção sugerida por `npm audit fix --force`
 faz downgrade incompatível do SDK; não deve ser aplicada automaticamente.
 Há também avisos de depreciação em ferramentas e dependências transitivas.
+
+## Persistência (Milestone 3)
+
+`expo-sqlite ~57.0.3` foi instalado por `expo install`. O layout abre `habitual.db`
+no diretório persistente padrão do Expo, via `SQLiteProvider`, e executa
+`initializeDatabase` antes de renderizar a navegação. A Home não consome o banco.
+
+As migrations são numeradas e usam `PRAGMA user_version`. Somente versões pendentes
+são aplicadas, em transação junto com o avanço da versão. Uma versão de banco mais
+nova que a aplicação é rejeitada. Nenhum dado é apagado durante inicialização.
+`PRAGMA foreign_keys = ON` é aplicado e verificado em cada conexão inicializada.
+
+O repository usa bindings para dados de entrada e aliases SQL para mapear os tipos.
+IDs são 128 bits aleatórios do SQLite (`lower(hex(randomblob(16)))`), protegidos
+por primary keys. Timestamps usam ISO 8601; `completion.date` permanece `LocalDate`.
+A conversão do timestamp de criação para dia local usa `toLocalDate` na Date Foundation.
+
+`update` e `toggleCompletion` lançam `Error('Habit not found.')` para um hábito ausente.
+Consultas retornam `null`/listas vazias; `delete` é idempotente. Nomes vazios e datas
+inválidas lançam `RangeError`. Nenhuma métrica é persistida.
+
+O contrato expõe Promises, mas as consultas usam a API síncrona do Expo. O toggle
+executa uma transação curta sem `await`, impedindo interleaving entre chamadas na
+mesma conexão. Falhas fazem rollback. Operações síncronas podem bloquear a thread
+JavaScript durante consultas; a medição/otimização de grandes volumes fica para o
+milestone de performance.
+
+Os testes usam SQLite real de `node:sqlite`, sem banco simulado e sem dependência
+adicional. Execute com o Node 24 LTS indicado acima. Para rodar apenas persistência:
+
+```sh
+npm test -- database.test.ts SQLiteHabitRepository.test.ts
+```
+
+A suíte cobre migration única, rollback, constraints, cascade, bindings, CRUD,
+ordenação, intervalos, validação de datas, toggles rápidos e reabertura de arquivo.
+O teste com SQLite do Node não substitui uma execução em dispositivo Expo.
