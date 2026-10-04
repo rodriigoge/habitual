@@ -53,8 +53,8 @@ describe('HabitCard', () => {
         habit={{
           id: 'reading',
           name: 'Leitura',
-          currentStreak: 1,
-          totalCompletions: 1,
+          createdAt: '2026-09-01T12:00:00Z',
+          updatedAt: '2026-09-01T12:00:00Z',
           completedDates: ['2026-10-03'],
         }}
       />,

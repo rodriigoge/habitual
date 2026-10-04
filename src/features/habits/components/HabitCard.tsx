@@ -2,25 +2,26 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../design-system/tokens/colors';
 import { spacing } from '../../../design-system/tokens/spacing';
 import { typography } from '../../../design-system/tokens/typography';
-import { getRecentDates } from '../../../shared/date/dateUtils';
+import { useRecentActivity } from '../hooks/useRecentActivity';
+import { useHabitMetrics } from '../hooks/useHabitMetrics';
+import type { HabitWithHistory } from '../hooks/useHabits';
 import type { LocalDate } from '../../../shared/date/LocalDate';
-import type { Habit } from '../domain/Habit';
-import type { HabitMetrics } from '../domain/HabitMetrics';
 import { DayStatus } from './DayStatus';
 import { StreakIndicator } from './StreakIndicator';
-
-export type HomeHabit = Pick<Habit, 'id' | 'name'> &
-  Pick<HabitMetrics, 'currentStreak' | 'totalCompletions'> & {
-    completedDates: readonly LocalDate[];
-  };
 
 export function HabitCard({
   habit,
   today,
+  onToggleDay,
+  error,
 }: {
-  habit: HomeHabit;
+  habit: HabitWithHistory;
   today: LocalDate;
+  onToggleDay?: (date: LocalDate) => void;
+  error?: string;
 }) {
+  const metrics = useHabitMetrics(habit.completedDates, today);
+  const days = useRecentActivity(habit.completedDates, habit.createdAt, today);
   return (
     <View style={styles.container} testID={`habit-${habit.id}`}>
       <View style={styles.heading}>
@@ -29,23 +30,34 @@ export function HabitCard({
             {habit.name}
           </Text>
           <Text style={styles.total}>
-            {habit.totalCompletions}{' '}
-            {habit.totalCompletions === 1 ? 'conclusão' : 'conclusões'}
+            {metrics.totalCompletions}{' '}
+            {metrics.totalCompletions === 1 ? 'conclusão' : 'conclusões'}
           </Text>
         </View>
-        <StreakIndicator value={habit.currentStreak} />
+        <StreakIndicator value={metrics.currentStreak} />
       </View>
       <View style={styles.days}>
-        {getRecentDates(today, 6).map((date) => (
+        {days.map(({ date, completed, disabled }) => (
           <DayStatus
             key={date}
             date={date}
             today={today}
             habitName={habit.name}
-            completed={habit.completedDates.includes(date)}
+            completed={completed}
+            disabled={disabled}
+            onPress={onToggleDay ? () => onToggleDay(date) : undefined}
           />
         ))}
       </View>
+      {error && (
+        <Text
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={styles.error}
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -61,4 +73,5 @@ const styles = StyleSheet.create({
   name: { ...typography.habitName, color: colors.textPrimary },
   total: { ...typography.body, color: colors.textSecondary },
   days: { flexDirection: 'row' },
+  error: { ...typography.caption, color: colors.danger },
 });

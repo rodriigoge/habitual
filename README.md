@@ -1,7 +1,7 @@
 # Habit Tracker Mobile
 
-Milestones 0–4: Expo SDK 57, Date Foundation, domínio puro, SQLite e Design System Foundation.
-A única tela exibe **Habit Tracker** e **App running**.
+Milestones 0–9: Home editorial com hábitos persistidos, criação por nome,
+edição dos seis dias recentes e estado vazio. Expo SDK 57, TypeScript e SQLite.
 
 ## Desenvolvimento
 
@@ -48,12 +48,11 @@ src/
 A Date Foundation fica em `src/shared/date`, o domínio e repository em
 `src/features/habits`, e a inicialização/migrations em `src/database`.
 A fundação visual está documentada em [src/design-system/README.md](src/design-system/README.md).
-UI de hábitos, calendário, backend e autenticação não foram implementados.
+Habit Details, calendário completo, edição/exclusão de hábitos, backend e autenticação não foram implementados.
 Os testes ficam fora de `app/` para não serem interpretados como rotas.
 
 O lockfile fixa a instalação. Os overrides de React DOM, Reanimated e Worklets
-alinham peers transitivos ao SDK 57; nenhuma funcionalidade web ou animação foi
-implementada. Os tipos globais de testes são declarados explicitamente para TypeScript 6.
+alinham peers transitivos ao SDK 57; nenhuma funcionalidade web foi implementada. Os tipos globais de testes são declarados explicitamente para TypeScript 6.
 
 ## Avisos de dependências
 
@@ -67,7 +66,7 @@ Há também avisos de depreciação em ferramentas e dependências transitivas.
 
 `expo-sqlite ~57.0.3` foi instalado por `expo install`. O layout abre `habitual.db`
 no diretório persistente padrão do Expo, via `SQLiteProvider`, e executa
-`initializeDatabase` antes de renderizar a navegação. A Home não consome o banco.
+`initializeDatabase` antes de renderizar a navegação. A Home acessa o repository por meio de useHabits, sem SQL nos componentes.
 
 As migrations são numeradas e usam `PRAGMA user_version`. Somente versões pendentes
 são aplicadas, em transação junto com o avanço da versão. Uma versão de banco mais
@@ -99,3 +98,27 @@ npm test -- database.test.ts SQLiteHabitRepository.test.ts
 A suíte cobre migration única, rollback, constraints, cascade, bindings, CRUD,
 ordenação, intervalos, validação de datas, toggles rápidos e reabertura de arquivo.
 O teste com SQLite do Node não substitui uma execução em dispositivo Expo.
+
+## Home (Milestones 6–9)
+
+A Home carrega hábitos em ordem de criação e o histórico completo de conclusões.
+As métricas são derivadas por calculateHabitMetrics; a janela visual usa
+getRecentDates(today, 6). Nenhum dado fictício é inserido no banco.
+
+O botão + e o CTA do estado vazio abrem o mesmo HabitFormSheet, feito com Modal,
+KeyboardAvoidingView e componentes existentes. O nome recebe trim e tem limite
+de 80 caracteres. Erros de criação ficam no formulário, sem perder o texto.
+
+Datas válidas usam atualização otimista. Gravações da mesma data são serializadas,
+preservando a intenção final de toques rápidos. Falhas restauram apenas a data
+afetada ao último estado confirmado, sem desfazer edições de outras datas.
+Datas anteriores à criação são indisponíveis. Haptics leves usam expo-haptics
+~57.0.3 somente ao concluir; falhas táteis não interrompem a persistência.
+
+Validação automatizada: 198 testes, typecheck, lint, formatter, compatibilidade
+Expo e exportação Android/iOS. Teclado, safe area, animação e haptics ainda precisam
+de revisão em dispositivo; o ambiente de implementação não tem emulador/ADB.
+
+A instalação de expo-haptics reportou 60 vulnerabilidades na árvore (10 moderadas
+e 50 altas) e bloqueio do postinstall de unrs-resolver pelo npm. Nenhuma versão
+existente do lockfile foi alterada. Não foi aplicado audit fix.

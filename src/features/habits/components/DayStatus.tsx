@@ -1,4 +1,11 @@
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  useAnimatedValue,
+} from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { colors } from '../../../design-system/tokens/colors';
 import { controls } from '../../../design-system/tokens/controls';
 import { radius } from '../../../design-system/tokens/radius';
@@ -12,6 +19,8 @@ type DayStatusProps = {
   today: LocalDate;
   completed: boolean;
   habitName: string;
+  disabled?: boolean;
+  onPress?: () => void;
 };
 
 export function DayStatus({
@@ -19,7 +28,11 @@ export function DayStatus({
   today,
   completed,
   habitName,
+  disabled = false,
+  onPress,
 }: DayStatusProps) {
+  const scale = useAnimatedValue(1);
+  const unavailable = disabled || !onPress;
   const isToday = date === today;
   const description = formatLocalDate(date, {
     day: 'numeric',
@@ -27,12 +40,34 @@ export function DayStatus({
     year: 'numeric',
   });
   return (
-    <View
+    <Pressable
       accessible
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: completed, disabled: true }}
+      accessibilityState={{ checked: completed, disabled: unavailable }}
       accessibilityLabel={`${habitName}, ${description}${isToday ? ', hoje' : ''}, ${completed ? 'concluído' : 'não concluído'}`}
-      style={styles.container}
+      disabled={unavailable}
+      onPress={() => {
+        onPress?.();
+        if (!completed)
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+            () => {},
+          );
+      }}
+      onPressIn={() =>
+        Animated.timing(scale, {
+          toValue: 0.9,
+          duration: 90,
+          useNativeDriver: true,
+        }).start()
+      }
+      onPressOut={() =>
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 90,
+          useNativeDriver: true,
+        }).start()
+      }
+      style={[styles.container, disabled && styles.disabled]}
     >
       <Text style={styles.weekday}>
         {formatLocalDate(date, { weekday: 'short' })}
@@ -40,8 +75,14 @@ export function DayStatus({
       <Text style={[styles.day, isToday && styles.todayLabel]}>
         {formatLocalDate(date, { day: '2-digit' })}
       </Text>
-      <View style={[styles.mark, completed && styles.completed]} />
-    </View>
+      <Animated.View
+        style={[
+          styles.mark,
+          completed && styles.completed,
+          { transform: [{ scale }] },
+        ]}
+      />
+    </Pressable>
   );
 }
 const styles = StyleSheet.create({
@@ -53,6 +94,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.xs,
   },
+  disabled: { opacity: controls.disabledOpacity },
   weekday: { ...typography.caption, color: colors.textSecondary },
   day: { ...typography.body, color: colors.textPrimary },
   todayLabel: { fontWeight: '700' },
