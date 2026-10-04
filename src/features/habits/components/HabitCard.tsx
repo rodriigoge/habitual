@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../../design-system/tokens/colors';
 import { spacing } from '../../../design-system/tokens/spacing';
 import { typography } from '../../../design-system/tokens/typography';
@@ -13,19 +13,31 @@ export function HabitCard({
   habit,
   today,
   onToggleDay,
+  onPress,
   error,
 }: {
   habit: HabitWithHistory;
   today: LocalDate;
+  onPress?: () => void;
   onToggleDay?: (date: LocalDate) => void;
   error?: string;
 }) {
   const metrics = useHabitMetrics(habit.completedDates, today);
   const days = useRecentActivity(habit.completedDates, habit.createdAt, today);
   return (
-    <View style={styles.container} testID={`habit-${habit.id}`}>
+    <Pressable
+      accessible={false}
+      onPress={onPress}
+      style={styles.container}
+      testID={`habit-${habit.id}`}
+    >
       <View style={styles.heading}>
-        <View style={styles.description}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Ver detalhes de ${habit.name}`}
+          onPress={onPress}
+          style={styles.description}
+        >
           <Text accessibilityRole="header" style={styles.name}>
             {habit.name}
           </Text>
@@ -33,8 +45,10 @@ export function HabitCard({
             {metrics.totalCompletions}{' '}
             {metrics.totalCompletions === 1 ? 'conclusão' : 'conclusões'}
           </Text>
-        </View>
-        <StreakIndicator value={metrics.currentStreak} />
+        </Pressable>
+        <Pressable accessible={false} onPress={onPress}>
+          <StreakIndicator value={metrics.currentStreak} />
+        </Pressable>
       </View>
       <View style={styles.days}>
         {days.map(({ date, completed, disabled }) => (
@@ -58,7 +72,7 @@ export function HabitCard({
           {error}
         </Text>
       )}
-    </View>
+    </Pressable>
   );
 }
 const styles = StyleSheet.create({

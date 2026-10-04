@@ -11,7 +11,7 @@ import { SQLiteHabitRepository } from '../repository/SQLiteHabitRepository';
 export type HabitWithHistory = Habit & { completedDates: LocalDate[] };
 type PendingDay = { confirmed: boolean; desired: boolean; revision: number };
 
-export function useHabits() {
+export function useHabitsState() {
   const db = useSQLiteContext();
   const repository = useMemo(() => new SQLiteHabitRepository(db), [db]);
   const [habits, setHabits] = useState<HabitWithHistory[]>([]);

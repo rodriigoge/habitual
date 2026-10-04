@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { HabitFormSheet } from '../src/features/habits/components/HabitFormSheet';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
@@ -14,6 +15,7 @@ import { Button } from '../src/design-system/components/Button/Button';
 import { formatLocalDate } from '../src/shared/date/dateUtils';
 
 export default function Home() {
+  const router = useRouter();
   const {
     habits,
     loading,
@@ -37,6 +39,12 @@ export default function Home() {
           keyExtractor={(habit) => habit.id}
           renderItem={({ item }) => (
             <HabitCard
+              onPress={() =>
+                router.push({
+                  pathname: '/habit/[id]',
+                  params: { id: item.id },
+                })
+              }
               habit={item}
               today={today}
               onToggleDay={(date) => toggleDay(item.id, date)}

@@ -1,9 +1,18 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
-import Home from '../app/index';
+import HomeScreen from '../app/index';
+import { HabitsProvider } from '../src/features/habits/hooks/useHabits';
 import { initializeDatabase } from '../src/database/database';
 import { SQLiteHabitRepository } from '../src/features/habits/repository/SQLiteHabitRepository';
 import { TestDatabase } from './support/TestDatabase';
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+function Home() {
+  return (
+    <HabitsProvider>
+      <HomeScreen />
+    </HabitsProvider>
+  );
+}
 
 let mockDatabase: TestDatabase;
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDatabase }));

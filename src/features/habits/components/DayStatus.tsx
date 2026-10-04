@@ -46,7 +46,8 @@ export function DayStatus({
       accessibilityState={{ checked: completed, disabled: unavailable }}
       accessibilityLabel={`${habitName}, ${description}${isToday ? ', hoje' : ''}, ${completed ? 'concluído' : 'não concluído'}`}
       disabled={unavailable}
-      onPress={() => {
+      onPress={(event) => {
+        event.stopPropagation();
         onPress?.();
         if (!completed)
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
