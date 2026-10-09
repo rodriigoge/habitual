@@ -101,3 +101,38 @@ export function formatLocalDate(
     timeZone: 'UTC',
   }).format(parseDate(date));
 }
+
+/** First calendar day of the month containing date. */
+export function startOfMonth(date: LocalDate): LocalDate {
+  const parsed = parseDate(date);
+  return formatDate(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, 1);
+}
+
+/** Moves to the first day of another month; rejects invalid/out-of-range input. */
+export function shiftMonth(date: LocalDate, amount: number): LocalDate {
+  if (!Number.isSafeInteger(amount))
+    throw new RangeError('Invalid month amount.');
+  const parsed = parseDate(startOfMonth(date));
+  parsed.setUTCMonth(parsed.getUTCMonth() + amount);
+  return formatDate(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, 1);
+}
+
+/** Sunday-first weeks. Empty cells belong outside the displayed month. */
+export function getMonthWeeks(date: LocalDate): (LocalDate | null)[][] {
+  const first = parseDate(startOfMonth(date));
+  const end = new Date(first.getTime());
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  end.setUTCDate(0);
+  const count = end.getUTCDate();
+  const offset = first.getUTCDay();
+  const cells = Array.from(
+    { length: Math.ceil((offset + count) / 7) * 7 },
+    (_, index) =>
+      index < offset || index >= offset + count
+        ? null
+        : addDays(startOfMonth(date), index - offset),
+  );
+  return Array.from({ length: cells.length / 7 }, (_, index) =>
+    cells.slice(index * 7, index * 7 + 7),
+  );
+}

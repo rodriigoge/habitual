@@ -8,6 +8,7 @@ import type { HabitWithHistory } from '../hooks/useHabits';
 import type { LocalDate } from '../../../shared/date/LocalDate';
 import { DayStatus } from './DayStatus';
 import { StreakIndicator } from './StreakIndicator';
+import { MetricValue } from './MetricValue';
 
 export function HabitCard({
   habit,
@@ -15,23 +16,20 @@ export function HabitCard({
   onToggleDay,
   onPress,
   error,
+  recordId,
 }: {
   habit: HabitWithHistory;
   today: LocalDate;
   onPress?: () => void;
   onToggleDay?: (date: LocalDate) => void;
   error?: string;
+  recordId?: number;
 }) {
   const metrics = useHabitMetrics(habit.completedDates, today);
   const days = useRecentActivity(habit.completedDates, habit.createdAt, today);
   return (
-    <Pressable
-      accessible={false}
-      onPress={onPress}
-      style={styles.container}
-      testID={`habit-${habit.id}`}
-    >
-      <View style={styles.heading}>
+    <View style={styles.container} testID={`habit-${habit.id}`}>
+      <Pressable accessible={false} onPress={onPress} style={styles.heading}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Ver detalhes de ${habit.name}`}
@@ -41,15 +39,16 @@ export function HabitCard({
           <Text accessibilityRole="header" style={styles.name}>
             {habit.name}
           </Text>
-          <Text style={styles.total}>
-            {metrics.totalCompletions}{' '}
-            {metrics.totalCompletions === 1 ? 'conclusão' : 'conclusões'}
-          </Text>
+          <MetricValue
+            value={metrics.totalCompletions}
+            suffix={metrics.totalCompletions === 1 ? 'conclusão' : 'conclusões'}
+            style={styles.total}
+          />
         </Pressable>
         <Pressable accessible={false} onPress={onPress}>
-          <StreakIndicator value={metrics.currentStreak} />
+          <StreakIndicator value={metrics.currentStreak} recordId={recordId} />
         </Pressable>
-      </View>
+      </Pressable>
       <View style={styles.days}>
         {days.map(({ date, completed, disabled }) => (
           <DayStatus
@@ -72,7 +71,7 @@ export function HabitCard({
           {error}
         </Text>
       )}
-    </Pressable>
+    </View>
   );
 }
 const styles = StyleSheet.create({

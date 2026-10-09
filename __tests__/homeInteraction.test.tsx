@@ -18,6 +18,8 @@ let mockDatabase: TestDatabase;
 jest.mock('expo-sqlite', () => ({ useSQLiteContext: () => mockDatabase }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  NotificationFeedbackType: { Success: 'success' },
   ImpactFeedbackStyle: { Light: 'light' },
 }));
 
@@ -48,6 +50,7 @@ describe('Home completion interaction', () => {
     habitId = (await repository.create({ name: 'Corrida' })).id;
     jest.setSystemTime(new Date(2026, 9, 3, 12));
     jest.mocked(Haptics.impactAsync).mockClear();
+    jest.mocked(Haptics.notificationAsync).mockClear();
   });
   afterEach(() => {
     mockDatabase.close();
@@ -196,6 +199,24 @@ describe('Home completion interaction', () => {
     expect(day(3)).not.toBeDisabled();
     await fireEvent.press(day(2));
     expect(toggle).not.toHaveBeenCalled();
+  });
+
+  it('briefly announces a newly reached best streak', async () => {
+    await repository.toggleCompletion(habitId, '2026-10-01');
+    await repository.toggleCompletion(habitId, '2026-10-02');
+    await render(<Home />);
+    await screen.findByText('Corrida');
+
+    await fireEvent.press(day(3));
+
+    expect(screen.getByText('NOVO RECORDE')).toBeOnTheScreen();
+    expect(screen.getByLabelText('3 dias seguidos')).toBeOnTheScreen();
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(850);
+    });
+    expect(screen.queryByText('NOVO RECORDE')).toBeNull();
   });
 
   it('does not fail persistence when haptics are unavailable', async () => {

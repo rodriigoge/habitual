@@ -25,6 +25,7 @@ export default function Home() {
     createHabit,
     toggleDay,
     completionError,
+    recordFeedback,
   } = useHabits();
   const [creating, setCreating] = useState(false);
   return (
@@ -51,6 +52,11 @@ export default function Home() {
               error={
                 completionError?.habitId === item.id
                   ? completionError.message
+                  : undefined
+              }
+              recordId={
+                recordFeedback?.habitId === item.id
+                  ? recordFeedback.id
                   : undefined
               }
             />
@@ -110,7 +116,7 @@ export default function Home() {
       </View>
       {creating && (
         <HabitFormSheet
-          onCreate={createHabit}
+          onSave={createHabit}
           onClose={() => setCreating(false)}
         />
       )}

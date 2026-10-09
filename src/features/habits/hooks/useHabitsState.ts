@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, LayoutAnimation, Platform, UIManager } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getToday, toLocalDate } from '../../../shared/date/dateUtils';
 import type { LocalDate } from '../../../shared/date/LocalDate';
@@ -7,15 +8,30 @@ import type { Habit } from '../domain/Habit';
 import { normalizeHabitName } from '../domain/HabitInput';
 import { validateCompletionDate } from '../domain/validateCompletionDate';
 import { SQLiteHabitRepository } from '../repository/SQLiteHabitRepository';
+import { calculateHabitMetrics } from '../domain/calculateHabitMetrics';
 
 export type HabitWithHistory = Habit & { completedDates: LocalDate[] };
-type PendingDay = { confirmed: boolean; desired: boolean; revision: number };
+type PendingDay = {
+  habitId: string;
+  settled?: Promise<void>;
+  confirmed: boolean;
+  desired: boolean;
+  revision: number;
+};
+
+function animateHabitListChange() {
+  if (Platform.OS === 'android') {
+    UIManager.setLayoutAnimationEnabledExperimental?.(true);
+  }
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+}
 
 export function useHabitsState() {
   const db = useSQLiteContext();
   const repository = useMemo(() => new SQLiteHabitRepository(db), [db]);
   const [habits, setHabits] = useState<HabitWithHistory[]>([]);
   const history = useRef<HabitWithHistory[]>([]);
+  const deleting = useRef(new Set<string>());
   const pending = useRef(new Map<string, PendingDay>());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -23,6 +39,12 @@ export function useHabitsState() {
     habitId: string;
     message: string;
   }>();
+  const [recordFeedback, setRecordFeedback] = useState<{
+    habitId: string;
+    id: number;
+  }>();
+  const recordId = useRef(0);
+  const recordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [today, setToday] = useState(getToday);
   const [attempt, setAttempt] = useState(0);
 
@@ -68,6 +90,13 @@ export function useHabitsState() {
     };
   }, [repository, attempt, updateHabits]);
 
+  useEffect(
+    () => () => {
+      if (recordTimer.current) clearTimeout(recordTimer.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     const updateDay = () => setToday(getToday());
     const interval = setInterval(updateDay, 60_000);
@@ -82,7 +111,40 @@ export function useHabitsState() {
 
   async function createHabit(name: string) {
     const habit = await repository.create({ name: normalizeHabitName(name) });
+    animateHabitListChange();
     updateHabits((current) => [...current, { ...habit, completedDates: [] }]);
+  }
+
+  async function updateHabit(id: string, name: string) {
+    const updated = await repository.update(id, {
+      name: normalizeHabitName(name),
+    });
+    updateHabits((current) =>
+      current.map((habit) =>
+        habit.id === id ? { ...habit, ...updated } : habit,
+      ),
+    );
+  }
+
+  async function deleteHabit(id: string) {
+    if (deleting.current.has(id)) return;
+    deleting.current.add(id);
+    try {
+      // Finish this habit's queued toggles before deleting; SQLite owns cascade.
+      await Promise.all(
+        [...pending.current.values()]
+          .filter((item) => item.habitId === id)
+          .map((item) => item.settled),
+      );
+      await repository.delete(id);
+      animateHabitListChange();
+      updateHabits((current) => current.filter((habit) => habit.id !== id));
+      setCompletionError((current) =>
+        current?.habitId === id ? undefined : current,
+      );
+    } finally {
+      deleting.current.delete(id);
+    }
   }
 
   function setDay(habitId: string, date: LocalDate, completed: boolean) {
@@ -100,7 +162,7 @@ export function useHabitsState() {
 
   function toggleDay(habitId: string, date: LocalDate) {
     const habit = history.current.find((item) => item.id === habitId);
-    if (!habit) return;
+    if (!habit || deleting.current.has(habitId)) return;
     const currentDay = getToday();
     setToday(currentDay);
     try {
@@ -117,6 +179,10 @@ export function useHabitsState() {
       return;
     }
     setCompletionError(undefined);
+    const previousBest = calculateHabitMetrics(
+      habit.completedDates,
+      currentDay,
+    ).bestStreak;
     const completed = habit.completedDates.includes(date);
     setDay(habitId, date, !completed);
     const key = JSON.stringify([habitId, date]);
@@ -127,6 +193,7 @@ export function useHabitsState() {
       return;
     }
     const operation: PendingDay = {
+      habitId,
       confirmed: completed,
       desired: !completed,
       revision: 0,
@@ -147,6 +214,24 @@ export function useHabitsState() {
             operation.desired = operation.confirmed;
         }
         setDay(habitId, date, operation.confirmed);
+        if (operation.confirmed) {
+          const updated = history.current.find((item) => item.id === habitId);
+          const nextBest = updated
+            ? calculateHabitMetrics(updated.completedDates, currentDay)
+                .bestStreak
+            : previousBest;
+          if (nextBest > previousBest) {
+            if (recordTimer.current) clearTimeout(recordTimer.current);
+            setRecordFeedback({ habitId, id: ++recordId.current });
+            void Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            ).catch(() => {});
+            recordTimer.current = setTimeout(() => {
+              setRecordFeedback(undefined);
+              recordTimer.current = null;
+            }, 850);
+          }
+        }
       } catch {
         // Restore only this date, preserving concurrent edits on other dates.
         setDay(habitId, date, operation.confirmed);
@@ -158,7 +243,7 @@ export function useHabitsState() {
         pending.current.delete(key);
       }
     }
-    void persist();
+    operation.settled = persist();
   }
 
   return {
@@ -166,9 +251,12 @@ export function useHabitsState() {
     loading,
     error,
     completionError,
+    recordFeedback,
     today,
     refresh,
     createHabit,
+    updateHabit,
+    deleteHabit,
     toggleDay,
   };
 }

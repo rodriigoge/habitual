@@ -11,7 +11,7 @@ export type ButtonProps = Pick<
 > & {
   disabled?: boolean;
   label: string;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'danger';
 };
 
 export function Button({
@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  danger: { backgroundColor: colors.danger },
   primary: { backgroundColor: colors.textPrimary },
   secondary: { backgroundColor: colors.surface },
   label: {

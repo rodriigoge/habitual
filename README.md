@@ -1,6 +1,6 @@
 # Habit Tracker Mobile
 
-Milestones 0–9: Home editorial com hábitos persistidos, criação por nome,
+Milestones 0–14: Home editorial com hábitos persistidos, criação por nome,
 edição dos seis dias recentes e estado vazio. Expo SDK 57, TypeScript e SQLite.
 
 ## Desenvolvimento
@@ -48,7 +48,7 @@ src/
 A Date Foundation fica em `src/shared/date`, o domínio e repository em
 `src/features/habits`, e a inicialização/migrations em `src/database`.
 A fundação visual está documentada em [src/design-system/README.md](src/design-system/README.md).
-Habit Details, calendário completo, edição/exclusão de hábitos, backend e autenticação não foram implementados.
+Backend e autenticação não foram implementados.
 Os testes ficam fora de `app/` para não serem interpretados como rotas.
 
 O lockfile fixa a instalação. Os overrides de React DOM, Reanimated e Worklets
@@ -115,10 +115,25 @@ afetada ao último estado confirmado, sem desfazer edições de outras datas.
 Datas anteriores à criação são indisponíveis. Haptics leves usam expo-haptics
 ~57.0.3 somente ao concluir; falhas táteis não interrompem a persistência.
 
-Validação automatizada: 198 testes, typecheck, lint, formatter, compatibilidade
+Validação automatizada: suíte completa, typecheck, lint, formatter, compatibilidade
 Expo e exportação Android/iOS. Teclado, safe area, animação e haptics ainda precisam
 de revisão em dispositivo; o ambiente de implementação não tem emulador/ADB.
 
 A instalação de expo-haptics reportou 60 vulnerabilidades na árvore (10 moderadas
 e 50 altas) e bloqueio do postinstall de unrs-resolver pelo npm. Nenhuma versão
 existente do lockfile foi alterada. Não foi aplicado audit fix.
+
+## Details e gestão (Milestones 10–14)
+
+A rota /habit/[id] apresenta métricas derivadas e calendário mensal.
+HabitsProvider compartilha o mesmo estado e toggle otimista entre Home e Details.
+O calendário usa LocalDate e limita navegação ao mês de criação até o atual.
+Dias futuros e anteriores à criação são indisponíveis; todos os outros permitem
+edição histórica com rollback. Operações de mês ficam na Date Foundation.
+
+Editar reutiliza HabitFormSheet e altera apenas o nome. Excluir exige confirmação
+com ação danger, aguarda toggles pendentes e remove apenas o hábito pelo repository;
+o cascade do SQLite remove as conclusões. Após excluir, o app retorna à Home.
+
+Nenhuma dependência nova foi adicionada em M10–M14. M15 e posteriores não foram
+implementados. Revisão visual e interação em dispositivo permanecem necessárias.

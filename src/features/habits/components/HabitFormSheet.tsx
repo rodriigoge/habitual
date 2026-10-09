@@ -22,13 +22,17 @@ import {
 } from '../domain/HabitInput';
 
 export function HabitFormSheet({
-  onCreate,
+  onSave,
+  mode = 'create',
+  initialName = '',
   onClose,
 }: {
-  onCreate: (name: string) => Promise<void>;
+  mode?: 'create' | 'edit';
+  initialName?: string;
+  onSave: (name: string) => Promise<void>;
   onClose: () => void;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
   const sending = useRef(false);
@@ -42,10 +46,14 @@ export function HabitFormSheet({
     setSubmitting(true);
     setError(undefined);
     try {
-      await onCreate(normalizeHabitName(name));
+      await onSave(normalizeHabitName(name));
       onClose();
     } catch {
-      setError('Não foi possível criar o hábito. Tente novamente.');
+      setError(
+        mode === 'edit'
+          ? 'Não foi possível salvar o hábito. Tente novamente.'
+          : 'Não foi possível criar o hábito. Tente novamente.',
+      );
     } finally {
       sending.current = false;
       setSubmitting(false);
@@ -80,7 +88,7 @@ export function HabitFormSheet({
             contentContainerStyle={styles.content}
           >
             <Text accessibilityRole="header" style={styles.title}>
-              Novo hábito
+              {mode === 'edit' ? 'Editar hábito' : 'Novo hábito'}
             </Text>
             <TextField
               ref={input}
@@ -100,7 +108,15 @@ export function HabitFormSheet({
               error={error}
             />
             <Button
-              label={submitting ? 'Criando…' : 'Criar hábito'}
+              label={
+                mode === 'edit'
+                  ? submitting
+                    ? 'Salvando…'
+                    : 'Salvar'
+                  : submitting
+                    ? 'Criando…'
+                    : 'Criar hábito'
+              }
               disabled={!valid || submitting}
               onPress={() => {
                 void submit();

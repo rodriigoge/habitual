@@ -19,6 +19,7 @@ type DayStatusProps = {
   today: LocalDate;
   completed: boolean;
   habitName: string;
+  compact?: boolean;
   disabled?: boolean;
   onPress?: () => void;
 };
@@ -28,6 +29,7 @@ export function DayStatus({
   today,
   completed,
   habitName,
+  compact = false,
   disabled = false,
   onPress,
 }: DayStatusProps) {
@@ -47,7 +49,7 @@ export function DayStatus({
       accessibilityLabel={`${habitName}, ${description}${isToday ? ', hoje' : ''}, ${completed ? 'concluído' : 'não concluído'}`}
       disabled={unavailable}
       onPress={(event) => {
-        event.stopPropagation();
+        event?.stopPropagation();
         onPress?.();
         if (!completed)
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
@@ -70,9 +72,11 @@ export function DayStatus({
       }
       style={[styles.container, disabled && styles.disabled]}
     >
-      <Text style={styles.weekday}>
-        {formatLocalDate(date, { weekday: 'short' })}
-      </Text>
+      {!compact && (
+        <Text style={styles.weekday}>
+          {formatLocalDate(date, { weekday: 'short' })}
+        </Text>
+      )}
       <Text style={[styles.day, isToday && styles.todayLabel]}>
         {formatLocalDate(date, { day: '2-digit' })}
       </Text>

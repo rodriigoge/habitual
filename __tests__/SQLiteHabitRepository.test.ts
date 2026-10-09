@@ -1,7 +1,11 @@
 /** @jest-environment node */
 import { initializeDatabase } from '../src/database/database';
 import { SQLiteHabitRepository } from '../src/features/habits/repository/SQLiteHabitRepository';
-import { addDays, getToday } from '../src/shared/date/dateUtils';
+import {
+  addDays,
+  differenceInCalendarDays,
+  getToday,
+} from '../src/shared/date/dateUtils';
 import { TestDatabase } from './support/TestDatabase';
 
 let db: TestDatabase;
@@ -206,6 +210,28 @@ it('orders history and queries inclusive intervals', async () => {
   await expect(
     repository.getCompletionsBetween(habit.id, 'invalid', '2026-10-04'),
   ).rejects.toThrow(RangeError);
+});
+
+it('deletes a five-year completion history through cascade', async () => {
+  jest.setSystemTime(new Date(2021, 9, 9, 12));
+  const habit = await repository.create({ name: 'Read' });
+  jest.setSystemTime(new Date(2026, 9, 2, 12));
+  const other = await repository.create({ name: 'Run' });
+  const today = getToday();
+
+  for (let index = 0; ; index += 1) {
+    const date = addDays('2021-10-09', index);
+    if (differenceInCalendarDays(date, today) > 0) break;
+    await repository.toggleCompletion(habit.id, date);
+  }
+  await repository.toggleCompletion(other.id, today);
+  const historyLength = differenceInCalendarDays(today, '2021-10-09') + 1;
+  expect(await repository.getCompletions(habit.id)).toHaveLength(historyLength);
+
+  await repository.delete(habit.id);
+  expect(await repository.findById(habit.id)).toBeNull();
+  expect(await repository.getCompletions(habit.id)).toEqual([]);
+  expect(await repository.getCompletions(other.id)).toHaveLength(1);
 });
 
 it('deletes through cascade without affecting another habit', async () => {
